@@ -1,0 +1,47 @@
+name: Update Metadata on Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  update-metadata:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Run metadata update
+      run: python update-metadata.py
+    
+    - name: Check for changes
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Commit updated metadata
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add metadata.json
+        git commit -m "Auto-update metadata for release ${{ github.ref_name }}"
+    
+    - name: Push changes
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: |
+        git push origin HEAD:main

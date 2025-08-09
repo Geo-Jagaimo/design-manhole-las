@@ -1,91 +1,63 @@
 #!/usr/bin/env python3
-"""
-LASファイルのメタデータを自動生成・更新するスクリプト
-"""
-
-import os
 import json
-import datetime
 from pathlib import Path
 
-
-def get_file_size_mb(file_path):
-    """ファイルサイズをMB単位で取得"""
-    size_bytes = os.path.getsize(file_path)
-    size_mb = size_bytes / (1024 * 1024)
-    return f"{size_mb:.1f}MB"
-
-
-def get_next_card_number(existing_cards):
-    """次のカード番号を生成"""
-    if not existing_cards:
-        return "A001"
+def get_file_metadata(file_path):
+    """Extract metadata from a file according to specifications"""
+    file_path = Path(file_path)
     
-    # 最大の番号を見つける
-    max_num = 0
-    for card in existing_cards:
-        if card.startswith("A"):
-            try:
-                num = int(card[1:])
-                max_num = max(max_num, num)
-            except ValueError:
-                continue
+    # name: filename without extension
+    name = file_path.stem
     
-    return f"A{max_num + 1:03d}"
-
+    # type: extension (uppercase, without dot)
+    file_type = file_path.suffix.lstrip('.').upper()
+    
+    # size: file size in megabytes
+    size_bytes = file_path.stat().st_size
+    size_mb = round(size_bytes / (1024 * 1024), 1)
+    size = f"{size_mb}MB"
+    
+    # card: extract card number after underscore, empty if no underscore
+    card = ""
+    if '_' in name:
+        card = name.split('_', 1)[1]  # Everything after first underscore
+    
+    return {
+        "name": name,
+        "type": file_type,
+        "size": size,
+        "card": card
+    }
 
 def update_metadata():
-    """メタデータを更新"""
-    las_dir = Path("las-files")
+    """Update metadata.json with current files in las-files directory"""
+    las_files_dir = Path("las-files")
     metadata_file = Path("metadata.json")
     
-    # 既存のメタデータを読み込み
-    if metadata_file.exists():
-        with open(metadata_file, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
-    else:
-        metadata = {"files": []}
-    
-    # 既存のファイル名とカード番号を取得
-    existing_files = {file_info["name"] for file_info in metadata["files"]}
-    existing_cards = {file_info["card"] for file_info in metadata["files"]}
-    
-    # LASファイルディレクトリをスキャン
-    if not las_dir.exists():
-        print("las-filesディレクトリが見つかりません")
+    if not las_files_dir.exists():
+        print(f"Directory {las_files_dir} not found")
         return
     
-    new_files_added = False
+    # Get all files in las-files directory
+    files_metadata = []
+    for file_path in las_files_dir.iterdir():
+        if file_path.is_file():
+            metadata = get_file_metadata(file_path)
+            files_metadata.append(metadata)
     
-    for las_file in las_dir.glob("*.las"):
-        filename = las_file.name
-        
-        # 既存のファイルはスキップ
-        if filename in existing_files:
-            continue
-        
-        # 新しいファイルのメタデータを作成
-        file_info = {
-            "name": filename,
-            "size": get_file_size_mb(las_file),
-            "date": datetime.date.today().strftime("%Y-%m-%d"),
-            "card": get_next_card_number(existing_cards)
-        }
-        
-        metadata["files"].append(file_info)
-        existing_cards.add(file_info["card"])
-        new_files_added = True
-        
-        print(f"新しいファイルを追加: {filename} ({file_info['size']}, {file_info['card']})")
+    # Sort by name for consistent output
+    files_metadata.sort(key=lambda x: x['name'])
     
-    # メタデータを保存
-    if new_files_added:
-        with open(metadata_file, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
-        print(f"metadata.jsonを更新しました")
-    else:
-        print("新しいLASファイルは見つかりませんでした")
-
+    # Create metadata structure
+    metadata = {
+        "files": files_metadata
+    }
+    
+    # Write to metadata.json
+    with open(metadata_file, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+    
+    print(f"Updated metadata.json with {len(files_metadata)} files")
 
 if __name__ == "__main__":
     update_metadata()
