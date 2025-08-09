@@ -7,7 +7,8 @@ def get_file_metadata(file_path):
     """Extract metadata from a file according to specifications"""
     file_path = Path(file_path)
 
-    name = file_path.stem
+    stem = file_path.stem
+    name = stem.split("_")[0] if "_" in stem else stem
 
     file_type = file_path.suffix.lstrip(".").upper()
 
@@ -17,8 +18,8 @@ def get_file_metadata(file_path):
 
     # card number
     card = ""
-    if "_" in name:
-        card = name.split("_", 1)[1]  # Everything after first underscore
+    if "_" in stem:
+        card = stem.split("_", 1)[1]  # Everything after first underscore
 
     return {"name": name, "type": file_type, "size": size, "card": card}
 
