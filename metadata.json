@@ -1,10 +1,24 @@
 {
   "files": [
     {
+      "name": ".DS",
+      "type": "",
+      "size": "0.0MB",
+      "card": "Store",
+      "owner": "Geo-Jagaimo"
+    },
+    {
       "name": "北海道士別市",
       "type": "LAS",
       "size": "1.4MB",
       "card": "A001",
+      "owner": "Geo-Jagaimo"
+    },
+    {
+      "name": "北海道士別市（ポケふた）",
+      "type": "LAS",
+      "size": "1.0MB",
+      "card": "",
       "owner": "Geo-Jagaimo"
     }
   ]
