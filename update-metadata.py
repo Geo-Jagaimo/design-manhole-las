@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import json
+import os
 from pathlib import Path
 
 
-def get_file_metadata(file_path):
+def get_file_metadata(file_path, owner=None):
     """Extract metadata from a file according to specifications"""
     file_path = Path(file_path)
 
@@ -21,7 +22,7 @@ def get_file_metadata(file_path):
     if "_" in stem:
         card = stem.split("_", 1)[1]  # Everything after first underscore
 
-    return {"name": name, "type": file_type, "size": size, "card": card}
+    return {"name": name, "type": file_type, "size": size, "card": card, "owner": owner}
 
 
 def update_metadata():
@@ -33,10 +34,13 @@ def update_metadata():
         print(f"Directory {las_files_dir} not found")
         return
 
+    # Get owner from environment variable (set by GitHub Actions)
+    owner = os.environ.get("GITHUB_ACTOR")
+
     files_metadata = []
     for file_path in las_files_dir.iterdir():
         if file_path.is_file():
-            metadata = get_file_metadata(file_path)
+            metadata = get_file_metadata(file_path, owner)
             files_metadata.append(metadata)
 
     files_metadata.sort(key=lambda x: x["name"])
