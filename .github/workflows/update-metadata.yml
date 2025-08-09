@@ -45,4 +45,5 @@ jobs:
     - name: Push changes
       if: steps.verify-changed-files.outputs.changed == 'true'
       run: |
-        git push
+        git checkout main
+        git push origin main
