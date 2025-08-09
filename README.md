@@ -4,7 +4,9 @@
 ## 概要 - Overview
 
 - [Scaniverse](https://scaniverse.com)を使用して3Dスキャンしたデザインマンホールの点群データ（LAS形式）を管理するリポジトリです。
+- デザインマンホールの3Dスキャンデータを収集・保存し、地域固有のデザインと位置情報をデジタルアーカイブとして記録することを目的としています。
 - This repository manages point cloud data (in LAS format) of designer manhole covers, which were 3D scanned using [Scaniverse](https://scaniverse.com).
+- This repository aims to collect and preserve 3D scan data of designer manhole covers, creating a digital archive of their unique regional designs and location information.
 
 
 ## 利用条件 - Terms of Use
