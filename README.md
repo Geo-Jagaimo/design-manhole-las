@@ -26,3 +26,17 @@
 - The copyright for the design of the manhole covers belongs to the respective municipalities and related organizations.
 - When using this data, you must respect all copyrights and handle the data appropriately.
 - If you have any copyright concerns or questions regarding the data published in this repository, please contact us promptly at "geo.jagaimo [at] gmail.com", and we will address them immediately.
+
+
+## 貢献方法 - Contribution Guide
+
+### 命名規則 - Naming Rules
+
+- 都道府県 + 市区町村 ｜ ex）北海道札幌市
+- 都道府県 + 市区町村（ポケふた） ｜ ex）北海道札幌市（ポケふた）
+- 都道府県 + 市区町村（キャラクター） ｜ ex）北海道札幌市（ミャクミャク）
+- 都道府県 + 市区町村 _ マンホールカード番号 ｜ ex）北海道札幌市_A001
+- Prefecture + City/Ward | ex）北海道札幌市
+- Prefecture + City/Ward (Poké Lids) | ex）北海道札幌市（ポケふた）
+- Prefecture + City/Ward (Character) | ex）北海道札幌市（ミャクミャク）
+- Prefecture + City/Ward _ Manhole Card Number | ex）北海道札幌市_A001
