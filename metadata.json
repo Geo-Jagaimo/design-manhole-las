@@ -8,6 +8,20 @@
       "owner": "Geo-Jagaimo"
     },
     {
+      "name": "京都府京都市",
+      "type": "LAS",
+      "size": "1.3MB",
+      "card": "B001",
+      "owner": "Geo-Jagaimo"
+    },
+    {
+      "name": "北海道北斗市",
+      "type": "LAS",
+      "size": "0.4MB",
+      "card": "A001",
+      "owner": "Geo-Jagaimo"
+    },
+    {
       "name": "北海道士別市",
       "type": "LAS",
       "size": "1.4MB",
