@@ -13,7 +13,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
         ref: main
@@ -24,7 +24,7 @@ jobs:
         python-version: '3.9'
     
     - name: Run metadata update
-      run: python update-metadata.py
+      run: python scripts/update-metadata.py
       env:
         GITHUB_ACTOR: ${{ github.actor }}
     

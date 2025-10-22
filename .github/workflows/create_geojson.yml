@@ -12,11 +12,11 @@ jobs:
       contents: write
 
     env:
-      OUT_GEOJSON: "centers/las_centers.geojson" #Path to output GeoJSON file
+      OUT_GEOJSON: "las_centers.geojson" #Path to output GeoJSON file
 
     steps:
       - name: Checkout merge commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.1
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
