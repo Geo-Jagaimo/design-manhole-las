@@ -29,7 +29,24 @@ def _val(x):
 
 
 def extract_bbox_center(meta_json: dict) -> Tuple[float, float, Optional[float]]:
-    md = meta_json.get("metadata", {})
+    def find_bbox(node):
+        if isinstance(node, dict):
+            # PDAL often nests bbox stats under readers.las or similar keys.
+            if all(k in node for k in ("minx", "maxx", "miny", "maxy")):
+                return node
+            for child in node.values():
+                found = find_bbox(child)
+                if found:
+                    return found
+        elif isinstance(node, list):
+            for item in node:
+                found = find_bbox(item)
+                if found:
+                    return found
+        return None
+
+    md_root = meta_json.get("metadata", {})
+    md = find_bbox(md_root) or md_root
     minx, maxx = _val(md.get("minx")), _val(md.get("maxx"))
     miny, maxy = _val(md.get("miny")), _val(md.get("maxy"))
     minz, maxz = _val(md.get("minz")), _val(md.get("maxz"))
