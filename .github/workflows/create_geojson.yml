@@ -19,24 +19,20 @@ jobs:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up PDAL environment
+        uses: mamba-org/setup-micromamba@v2
         with:
-          python-version: "3.11"
-
-      - name: Install system deps (PDAL & jq)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pdal pdal-tools jq
-
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyproj
+          environment-name: pdal-env
+          create-args: >
+            python=3.11
+            pdal
+            pyproj
+            jq
+          init-shell: bash
 
       - name: Determine changed LAS files in this PR
         id: diffs
-        shell: bash
+        shell: bash -l {0}
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
@@ -46,10 +42,10 @@ jobs:
 
       - name: Append/Update features into a single GeoJSON
         if: steps.diffs.outputs.files != ''
-        shell: bash
+        shell: bash -l {0}
         run: |
           mkdir -p "$(dirname "$OUT_GEOJSON")"
-          python scripts/las_centers_append.py --out "$OUT_GEOJSON" ${{ steps.diffs.outputs.files }}
+          micromamba run -n pdal-env python scripts/create_geojson --out "$OUT_GEOJSON" ${{ steps.diffs.outputs.files }}
 
       - name: Commit and push results
         if: steps.diffs.outputs.files != ''
