@@ -111,13 +111,21 @@ def upsert_feature(fc: dict, feature: dict, key: str = "source_las") -> None:
 
 
 def make_feature(
-    source_las: Path, lon: float, lat: float, zc: Optional[float], src_crs: CRS
+    source_las: Path,
+    lon: float,
+    lat: float,
+    zc: Optional[float],
+    src_crs: CRS,
+    center_x: float,
+    center_y: float,
 ) -> dict:
     return {
         "type": "Feature",
         "geometry": {"type": "Point", "coordinates": [lon, lat]},
         "properties": {
             "source_las": str(source_las.as_posix()),  # 一意キー
+            "center_x": center_x,
+            "center_y": center_y,
             "center_type": "bbox_center",
             "z_center": zc,
             "src_crs": src_crs.to_string(),  # 例: EPSG:32654
@@ -158,7 +166,7 @@ def main():
             cx, cy, cz = extract_bbox_center(md)
             src_crs = detect_crs(las)
             lon, lat = to4326(cx, cy, src_crs)
-            feat = make_feature(las, lon, lat, cz, src_crs)
+            feat = make_feature(las, lon, lat, cz, src_crs, cx, cy)
             upsert_feature(fc, feat, key="source_las")
             seen_sources.add(str(las.as_posix()))
             print(f"[OK] {las} -> ({lon:.8f}, {lat:.8f})  srcCRS={src_crs.to_string()}")
