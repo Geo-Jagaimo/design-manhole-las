@@ -47,7 +47,7 @@ jobs:
         shell: bash -l {0}
         run: |
           mkdir -p "$(dirname "$OUT_GEOJSON")"
-          micromamba run -n pdal-env python scripts/create_geojson --out "$OUT_GEOJSON" ${{ steps.diffs.outputs.files }}
+          micromamba run -n pdal-env python scripts/create_geojson.py --out "$OUT_GEOJSON" ${{ steps.diffs.outputs.files }}
 
       - name: Commit and push results
         if: steps.diffs.outputs.files != ''
