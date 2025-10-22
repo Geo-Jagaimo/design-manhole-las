@@ -8,6 +8,8 @@ jobs:
   append-centers:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     env:
       OUT_GEOJSON: "centers/las_centers.geojson" #Path to output GeoJSON file
