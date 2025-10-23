@@ -28,7 +28,23 @@ def _val(x):
     return x.get("value") if isinstance(x, dict) and "value" in x else x
 
 
-def extract_bbox_center(meta_json: dict) -> Tuple[float, float, Optional[float]]:
+def extract_bbox_center(meta_json: dict, summary_json: dict) -> Tuple[float, float, Optional[float]]:
+    summary_bounds = summary_json.get("summary", {}).get("bounds", {})
+    if summary_bounds:
+        x_bounds = summary_bounds.get("X") or summary_bounds.get("x") or {}
+        y_bounds = summary_bounds.get("Y") or summary_bounds.get("y") or {}
+        z_bounds = summary_bounds.get("Z") or summary_bounds.get("z") or {}
+        minx, maxx = _val(x_bounds.get("minimum")), _val(x_bounds.get("maximum"))
+        miny, maxy = _val(y_bounds.get("minimum")), _val(y_bounds.get("maximum"))
+        minz, maxz = _val(z_bounds.get("minimum")), _val(z_bounds.get("maximum"))
+        if None not in (minx, maxx, miny, maxy):
+            cx = (float(minx) + float(maxx)) / 2.0
+            cy = (float(miny) + float(maxy)) / 2.0
+            cz = None
+            if minz is not None and maxz is not None:
+                cz = (float(minz) + float(maxz)) / 2.0
+            return cx, cy, cz
+
     def find_bbox(node):
         if isinstance(node, dict):
             # PDAL often nests bbox stats under readers.las or similar keys.
@@ -180,7 +196,8 @@ def main():
             continue
         try:
             md = pdal_metadata(las)
-            cx, cy, cz = extract_bbox_center(md)
+            summary = pdal_summary(las)
+            cx, cy, cz = extract_bbox_center(md, summary)
             src_crs = detect_crs(las)
             lon, lat = to4326(cx, cy, src_crs)
             feat = make_feature(las, lon, lat, cz, src_crs, cx, cy)
