@@ -5,7 +5,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'las-files/**/*.las'
+      - 'las-files/*.las'
   workflow_dispatch:
 
 permissions:
@@ -41,12 +41,11 @@ jobs:
         id: list
         shell: bash
         run: |
-          FILES=$(git ls-files 'las-files/**/*.las' 2>/dev/null | sort -u || true)
+          FILES=$(git ls-files 'las-files/*.las' 2>/dev/null | sort -u || true)
           echo "files<<EOF" >> $GITHUB_OUTPUT
           echo "$FILES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          echo "Found files:"
-          echo "$FILES"
+          echo "Found files:"; echo "$FILES"
 
       - name: Rebuild index.geojson from ALL LAS
         if: steps.list.outputs.files != ''
