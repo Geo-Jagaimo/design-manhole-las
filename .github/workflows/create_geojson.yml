@@ -27,12 +27,36 @@ jobs:
           environment-name: pdal-env
           create-args: >-
             -c conda-forge
+            python
             pdal
+            python-pdal
           cache-environment: true
           init-shell: bash
+
+      - name: Check PDAL & Python bindings
+        shell: bash -l {0}
+        run: |
+          micromamba activate pdal-env
+          pdal --version
+          python -c "import pdal; import sys; print('python-pdal OK')"
 
       - name: Build index.geojson via Python
         shell: bash -l {0}
         run: |
+          set -euo pipefail
           micromamba activate pdal-env
-          python3 script.py --glob 'las-files/*.las' --out index.geojson --pretty
+          python script.py --glob 'las-files/*.las' --out index.geojson --pretty
+
+      - name: Commit only index.geojson
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.geojson
+          if ! git diff --cached --quiet; then
+            git commit -m "Update centroid index [skip ci]"
+            git push
+          else
+            echo "No changes in index.geojson."
+          fi
