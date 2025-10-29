@@ -15,8 +15,11 @@ jobs:
   centroid-index:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (with LFS)
         uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
 
       - name: Setup micromamba with PDAL & jq
         uses: mamba-org/setup-micromamba@v2
@@ -65,7 +68,6 @@ jobs:
               pipeline: [
                 $in,
                 {type:"filters.reprojection", out_srs:"EPSG:4326"},
-                {type:"filters.outlier", method:"statistical", mean_k:16, multiplier:2.5},
                 {type:"filters.stats", dimensions:"X,Y,Z"},
                 {type:"writers.null"}
               ]
@@ -74,6 +76,8 @@ jobs:
             meta="$(mktemp)"
             if ! pdal pipeline "$tmp_pipeline" --metadata "$meta"; then
               echo "WARN: PDAL failed on $f. Skipping."
+              echo "PDAL info (summary) for $f:"
+              pdal info "$f" --summary || true
               continue
             fi
 
