@@ -36,21 +36,23 @@ jobs:
       - name: Check PDAL & Python bindings
         shell: bash -l {0}
         run: |
-          micromamba activate pdal-env
-          pdal --version
-          python -c "import pdal; import sys; print('python-pdal OK')"
+          set -eo pipefail
+          micromamba run -n pdal-env pdal --version
+          micromamba run -n pdal-env python - <<'PY'
+          import pdal
+          print("python-pdal OK")
+          PY
 
       - name: Build index.geojson via Python
         shell: bash -l {0}
         run: |
-          set -euo pipefail
-          micromamba activate pdal-env
-          python script.py --glob 'las-files/*.las' --out index.geojson --pretty
+          set -eo pipefail
+          micromamba run -n pdal-env python script.py --glob 'las-files/*.las' --out index.geojson --pretty
 
       - name: Commit only index.geojson
         shell: bash -l {0}
         run: |
-          set -euo pipefail
+          set -eo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.geojson
