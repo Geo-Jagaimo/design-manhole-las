@@ -54,16 +54,21 @@ jobs:
         if: steps.list.outputs.files != ''
         shell: bash -l {0}
         run: |
+          set -euo pipefail
           micromamba activate pdal-env
           INDEX="index.geojson"
           echo '{ "type": "FeatureCollection", "features": [] }' > "$INDEX"
+
+          SUCCESS_COUNT=0
+          FAIL_COUNT=0
 
           while IFS= read -r f; do
             [ -z "$f" ] && continue
             echo "Processing: $f"
 
-            # PDALパイプラインJSONを jq -n で生成（heredoc回避）
             tmp_pipeline="$(mktemp)"
+            meta="$(mktemp)"
+
             jq -n --arg in "$f" '{
               pipeline: [
                 $in,
@@ -73,11 +78,10 @@ jobs:
               ]
             }' > "$tmp_pipeline"
 
-            meta="$(mktemp)"
-            if ! pdal pipeline "$tmp_pipeline" --metadata "$meta"; then
-              echo "WARN: PDAL failed on $f. Skipping."
-              echo "PDAL info (summary) for $f:"
-              pdal info "$f" --summary || true
+            if ! pdal pipeline "$tmp_pipeline" --metadata "$meta" 2>&1; then
+              echo "ERROR: PDAL failed on $f"
+              ((FAIL_COUNT++))
+              rm -f "$tmp_pipeline" "$meta"
               continue
             fi
 
@@ -85,23 +89,32 @@ jobs:
             Y=$(jq -r '.metadata["filters.stats"].statistic[] | select(.name=="Y") | .average' "$meta")
             Z=$(jq -r '.metadata["filters.stats"].statistic[] | select(.name=="Z") | .average' "$meta")
 
-            # 数値判定（NaN/空を除外）
             if [[ -z "$X" || -z "$Y" || "$X" == "null" || "$Y" == "null" ]]; then
-              echo "WARN: No centroid for $f. Skipping feature."
+              echo "WARN: No valid centroid for $f"
+              ((FAIL_COUNT++))
+              rm -f "$tmp_pipeline" "$meta"
               continue
             fi
 
-            # index.geojson に1フィーチャ追記
             jq --arg file "$f" --argjson x "$X" --argjson y "$Y" --argjson z "${Z:-null}" \
               '.features += [{
-                 "type":"Feature",
-                 "properties":{"source_file":$file,"z":$z},
-                 "geometry":{"type":"Point","coordinates":[ $x, $y ]}
-               }]' "$INDEX" > "$INDEX.tmp" && mv "$INDEX.tmp" "$INDEX"
+                "type":"Feature",
+                "properties":{"source_file":$file,"z":$z},
+                "geometry":{"type":"Point","coordinates":[ $x, $y ]}
+              }]' "$INDEX" > "$INDEX.tmp" && mv "$INDEX.tmp" "$INDEX"
+
+            ((SUCCESS_COUNT++))
+            rm -f "$tmp_pipeline" "$meta"
           done <<< "${{ steps.list.outputs.files }}"
 
-          echo "Built $INDEX"
-          jq '.features | length as $n | "features: \($n)"' "$INDEX"
+          echo "Processed: $SUCCESS_COUNT successful, $FAIL_COUNT failed"
+
+          if [ "$SUCCESS_COUNT" -eq 0 ]; then
+            echo "ERROR: No files were successfully processed"
+            exit 1
+          fi
+
+          jq '.features | length' "$INDEX"
 
       - name: Commit only index.geojson
         if: steps.list.outputs.files != ''
