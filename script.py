@@ -62,30 +62,43 @@ def _extract_dimension_averages(statistic_node) -> dict:
     return averages
 
 
-def build_pipeline(filename: str, in_srs: str | None, out_srs: str) -> str:
+def build_pipeline(
+    filename: str,
+    in_srs: str | None,
+    out_srs: str,
+    *,
+    apply_reprojection: bool = True,
+) -> str:
     """
     PDAL Pipeline JSON（文字列）を構築。
-    - in_srs があれば readers.las に override_srs / filters.reprojection.in_srs を明示
-    - なければLASヘッダのSRSを使用（filters.reprojectionは out_srs だけ）
+    - apply_reprojection=True なら WGS84 へ再投影して stats を取得
+    - False の場合は元SRSのまま stats を取得（fallback 用）
     """
+    stages: list[dict | str] = []
+
+    reader: dict[str, str] | str
     if in_srs:
-        pipeline = {
-            "pipeline": [
-                {"type": "readers.las", "filename": filename, "override_srs": in_srs},
-                {"type": "filters.reprojection", "in_srs": in_srs, "out_srs": out_srs},
-                {"type": "filters.stats", "dimensions": "X,Y,Z"},
-                {"type": "writers.null"},
-            ]
-        }
+        reader = {"type": "readers.las", "filename": filename, "override_srs": in_srs}
     else:
-        pipeline = {
-            "pipeline": [
-                filename,
-                {"type": "filters.reprojection", "out_srs": out_srs},
-                {"type": "filters.stats", "dimensions": "X,Y,Z"},
-                {"type": "writers.null"},
-            ]
-        }
+        reader = filename
+    stages.append(reader)
+
+    if apply_reprojection:
+        reprojection = (
+            {"type": "filters.reprojection", "in_srs": in_srs, "out_srs": out_srs}
+            if in_srs
+            else {"type": "filters.reprojection", "out_srs": out_srs}
+        )
+        stages.append(reprojection)
+
+    stages.extend(
+        [
+            {"type": "filters.stats", "dimensions": "X,Y,Z"},
+            {"type": "writers.null"},
+        ]
+    )
+
+    pipeline = {"pipeline": stages}
     return json.dumps(pipeline)
 
 
@@ -96,26 +109,46 @@ def centroid_for_file(
     1ファイルの重心 (X,Y,Z) を返す（lon, lat, z）。
     失敗時は None。
     """
-    pipe_json = build_pipeline(str(path), in_srs, out_srs)
-    try:
-        pipe = pdal.Pipeline(pipe_json)
-        pipe.validate()  # 検証
-        pipe.execute()  # 実行
-        meta = json.loads(pipe.metadata)  # str -> dict
-        stats_node = (
-            meta.get("metadata", {}).get("filters.stats", {}).get("statistic", [])
+    allow_fallback = in_srs is None
+    for apply_reprojection in (True, False):
+        if not apply_reprojection and not allow_fallback:
+            # in_srs 指定時は再投影が必須なので fallback せず終了
+            break
+        pipe_json = build_pipeline(
+            str(path), in_srs, out_srs, apply_reprojection=apply_reprojection
         )
-        avg = _extract_dimension_averages(stats_node)
-        x = avg.get("X") or avg.get("x")
-        y = avg.get("Y") or avg.get("y")
-        z = avg.get("Z") or avg.get("z")
-        if x is None or y is None:
+        try:
+            pipe = pdal.Pipeline(pipe_json)
+            pipe.validate()  # 検証
+            pipe.execute()  # 実行
+            meta = json.loads(pipe.metadata)  # str -> dict
+            stats_node = (
+                meta.get("metadata", {}).get("filters.stats", {}).get("statistic", [])
+            )
+            avg = _extract_dimension_averages(stats_node)
+            x = avg.get("X") or avg.get("x")
+            y = avg.get("Y") or avg.get("y")
+            z = avg.get("Z") or avg.get("z")
+            if x is None or y is None:
+                return None
+            if not apply_reprojection and allow_fallback:
+                print(
+                    f"[WARN] Using original coordinates for {path} "
+                    "(no spatial reference detected; consider --in-srs).",
+                    file=sys.stderr,
+                )
+            return float(x), float(y), float(z) if z is not None else None
+        except Exception as e:
+            if apply_reprojection and allow_fallback:
+                print(
+                    f"[WARN] Reprojection failed for {path} (missing/invalid SRS?). "
+                    "Retrying without reprojection.",
+                    file=sys.stderr,
+                )
+                continue
+            print(f"[WARN] PDAL failed on {path}: {e}", file=sys.stderr)
             return None
-        return float(x), float(y), float(z) if z is not None else None
-    except Exception as e:
-        # ここで詳しい原因を出力
-        print(f"[WARN] PDAL failed on {path}: {e}", file=sys.stderr)
-        return None
+    return None
 
 
 def main():
