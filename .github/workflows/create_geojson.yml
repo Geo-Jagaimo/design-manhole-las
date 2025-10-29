@@ -6,6 +6,7 @@ on:
     branches: [ main ]
     paths:
       - 'las-files/**/*.las'
+  workflow_dispatch:
 
 permissions:
   contents: write
