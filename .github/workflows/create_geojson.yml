@@ -39,8 +39,7 @@ jobs:
         if: steps.list.outputs.files != ''
         shell: bash
         run: |
-          mkdir -p outputs/centroids
-          INDEX="outputs/centroids/index.geojson"
+          INDEX="index.geojson"
           echo '{ "type": "FeatureCollection", "features": [] }' > "$INDEX"
 
           while IFS= read -r f; do
