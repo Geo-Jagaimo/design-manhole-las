@@ -5,7 +5,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - /las-files/**/*.las
+      - 'las-files/**/*.las'
 
 permissions:
   contents: write
@@ -35,7 +35,7 @@ jobs:
           echo "Found files:"
           echo "$FILES"
 
-      - name: Rebuild outputs/centroids/index.geojson from ALL LAS
+      - name: Rebuild index.geojson from ALL LAS
         if: steps.list.outputs.files != ''
         shell: bash
         run: |
@@ -92,7 +92,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add outputs/centroids/index.geojson
+          git add index.geojson
           if ! git diff --cached --quiet; then
             git commit -m "Update centroid index for LAS changes [skip ci]"
             git push
