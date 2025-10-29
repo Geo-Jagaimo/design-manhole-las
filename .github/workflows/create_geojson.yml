@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Create centroid GeoJSON index
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**/*.las'
+
+permissions:
+  contents: write
+
+jobs:
+  centroid-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PDAL & jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pdal jq
+          pdal --version
+          jq --version
+
+      - name: Find LAS files
+        id: list
+        shell: bash
+        run: |
+          FILES=$(git ls-files '*.las' 2>/dev/null | sort -u || true)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Found files:"
+          echo "$FILES"
+
+      - name: Rebuild outputs/centroids/index.geojson from ALL LAS
+        if: steps.list.outputs.files != ''
+        shell: bash
+        run: |
+          mkdir -p outputs/centroids
+          INDEX="outputs/centroids/index.geojson"
+          echo '{ "type": "FeatureCollection", "features": [] }' > "$INDEX"
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            echo "Processing: $f"
+
+            # PDALパイプラインJSONを jq -n で生成（heredoc回避）
+            tmp_pipeline="$(mktemp)"
+            jq -n --arg in "$f" '{
+              pipeline: [
+                $in,
+                {type:"filters.reprojection", out_srs:"EPSG:4326"},
+                {type:"filters.outlier", method:"statistical", mean_k:16, multiplier:2.5},
+                {type:"filters.stats", dimensions:"X,Y,Z"},
+                {type:"writers.null"}
+              ]
+            }' > "$tmp_pipeline"
+
+            meta="$(mktemp)"
+            if ! pdal pipeline "$tmp_pipeline" --metadata "$meta"; then
+              echo "WARN: PDAL failed on $f. Skipping."
+              continue
+            fi
+
+            X=$(jq -r '.metadata["filters.stats"].statistic[] | select(.name=="X") | .average' "$meta")
+            Y=$(jq -r '.metadata["filters.stats"].statistic[] | select(.name=="Y") | .average' "$meta")
+            Z=$(jq -r '.metadata["filters.stats"].statistic[] | select(.name=="Z") | .average' "$meta")
+
+            # 数値判定（NaN/空を除外）
+            if [[ -z "$X" || -z "$Y" || "$X" == "null" || "$Y" == "null" ]]; then
+              echo "WARN: No centroid for $f. Skipping feature."
+              continue
+            fi
+
+            # index.geojson に1フィーチャ追記
+            jq --arg file "$f" --argjson x "$X" --argjson y "$Y" --argjson z "${Z:-null}" \
+              '.features += [{
+                 "type":"Feature",
+                 "properties":{"source_file":$file,"z":$z},
+                 "geometry":{"type":"Point","coordinates":[ $x, $y ]}
+               }]' "$INDEX" > "$INDEX.tmp" && mv "$INDEX.tmp" "$INDEX"
+          done <<< "${{ steps.list.outputs.files }}"
+
+          echo "Built $INDEX"
+          jq '.features | length as $n | "features: \($n)"' "$INDEX"
+
+      - name: Commit only index.geojson
+        if: steps.list.outputs.files != ''
+        shell: bash
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add outputs/centroids/index.geojson
+          if ! git diff --cached --quiet; then
+            git commit -m "Update centroid index for LAS changes [skip ci]"
+            git push
+          else
+            echo "No changes in index.geojson."
+          fi
