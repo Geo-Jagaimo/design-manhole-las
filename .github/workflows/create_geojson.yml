@@ -17,10 +17,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install PDAL & jq
+      - name: Setup micromamba with PDAL & jq
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          micromamba-version: 'latest'
+          environment-name: pdal-env
+          create-args: >-
+            -c conda-forge
+            pdal
+            jq
+          cache-environment: true
+          init-shell: bash
+
+      - name: Check PDAL & jq versions
+        shell: bash -l {0}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pdal jq
+          micromamba activate pdal-env
           pdal --version
           jq --version
 
@@ -37,8 +49,9 @@ jobs:
 
       - name: Rebuild index.geojson from ALL LAS
         if: steps.list.outputs.files != ''
-        shell: bash
+        shell: bash -l {0}
         run: |
+          micromamba activate pdal-env
           INDEX="index.geojson"
           echo '{ "type": "FeatureCollection", "features": [] }' > "$INDEX"
 
@@ -88,7 +101,7 @@ jobs:
 
       - name: Commit only index.geojson
         if: steps.list.outputs.files != ''
-        shell: bash
+        shell: bash -l {0}
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
