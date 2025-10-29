@@ -29,6 +29,39 @@ FEATURE_TPL = {
 FC_TPL = {"type": "FeatureCollection", "features": []}
 
 
+def _extract_dimension_averages(statistic_node) -> dict:
+    """
+    PDALのfilters.stats出力から平均値を取り出す。
+    バージョンにより配列/辞書のいずれかになるので両対応する。
+    """
+    averages: dict[str, float] = {}
+    if isinstance(statistic_node, list):
+        for entry in statistic_node:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get("name")
+            avg = entry.get("average")
+            if name and avg is not None:
+                averages[name] = avg
+        return averages
+
+    if isinstance(statistic_node, dict):
+        # 値が入れ子の辞書 ({"X": {...}, "Y": {...}}) と単独辞書の両方を面倒見る
+        if "name" in statistic_node and "average" in statistic_node:
+            name = statistic_node.get("name")
+            avg = statistic_node.get("average")
+            if name and avg is not None:
+                averages[name] = avg
+        for key, value in statistic_node.items():
+            if not isinstance(value, dict):
+                continue
+            name = value.get("name") or key
+            avg = value.get("average")
+            if name and avg is not None:
+                averages[name] = avg
+    return averages
+
+
 def build_pipeline(filename: str, in_srs: str | None, out_srs: str) -> str:
     """
     PDAL Pipeline JSON（文字列）を構築。
@@ -69,10 +102,13 @@ def centroid_for_file(
         pipe.validate()  # 検証
         pipe.execute()  # 実行
         meta = json.loads(pipe.metadata)  # str -> dict
-        stats = meta.get("metadata", {}).get("filters.stats", {}).get("statistic", [])
-        # statistic は [{name:"X",average:...}, ...] の配列
-        avg = {d.get("name"): d.get("average") for d in stats if isinstance(d, dict)}
-        x, y, z = avg.get("X"), avg.get("Y"), avg.get("Z")
+        stats_node = (
+            meta.get("metadata", {}).get("filters.stats", {}).get("statistic", [])
+        )
+        avg = _extract_dimension_averages(stats_node)
+        x = avg.get("X") or avg.get("x")
+        y = avg.get("Y") or avg.get("y")
+        z = avg.get("Z") or avg.get("z")
         if x is None or y is None:
             return None
         return float(x), float(y), float(z) if z is not None else None
