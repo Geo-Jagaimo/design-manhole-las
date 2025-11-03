@@ -24,7 +24,7 @@ jobs:
         python-version: '3.9'
     
     - name: Run metadata update
-      run: python scripts/update-metadata.py
+      run: python scripts/update_metadata.py
       env:
         GITHUB_ACTOR: ${{ github.actor }}
     
