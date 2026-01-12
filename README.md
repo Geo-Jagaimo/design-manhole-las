@@ -1,0 +1,42 @@
+# design-manhole-las
+
+
+## 概要 - Overview
+
+- [Scaniverse](https://scaniverse.com)を使用して3Dスキャンしたデザインマンホールの点群データ（LAS形式）を管理するリポジトリです。
+- デザインマンホールの3Dスキャンデータを収集・保存し、地域固有のデザインと位置情報をデジタルアーカイブとして記録することを目的としています。
+- This repository manages point cloud data (in LAS format) of designer manhole covers, which were 3D scanned using [Scaniverse](https://scaniverse.com).
+- This repository aims to collect and preserve 3D scan data of designer manhole covers, creating a digital archive of their unique regional designs and location information.
+
+
+## 利用条件 - Terms of Use
+
+### 利用範囲 - Permitted Use
+
+- 個人利用および研究目的での利用のみ許可します。
+- 商用利用は禁じます。
+- This data is for personal and research purposes only.
+- Commercial use is strictly prohibited.
+
+### 著作権について - Copyright
+
+- デザインマンホールのデザインに関する一切の著作権は、各自治体・関連機関に帰属します。
+- 本データの利用時は、著作権を尊重し適切な取り扱いを行ってください。
+- 本リポジトリで公開しているデータについて、著作権や利用に関するご指摘・ご質問がございましたら、速やかに対応いたします。"geo.jagaimo [at] gmail.com"までお知らせください。
+- The copyright for the design of the manhole covers belongs to the respective municipalities and related organizations.
+- When using this data, you must respect all copyrights and handle the data appropriately.
+- If you have any copyright concerns or questions regarding the data published in this repository, please contact us promptly at "geo.jagaimo [at] gmail.com", and we will address them immediately.
+
+
+## 貢献方法 - Contribution Guide
+
+### 命名規則 - Naming Rules
+
+- 都道府県 + 市区町村 ｜ ex）北海道札幌市
+- 都道府県 + 市区町村（ポケふた） ｜ ex）北海道札幌市（ポケふた）
+- 都道府県 + 市区町村（キャラクター） ｜ ex）北海道札幌市（ミャクミャク）
+- 都道府県 + 市区町村 _ マンホールカード番号 ｜ ex）北海道札幌市_A001
+- Prefecture + City/Ward | ex）北海道札幌市
+- Prefecture + City/Ward (Poké Lids) | ex）北海道札幌市（ポケふた）
+- Prefecture + City/Ward (Character) | ex）北海道札幌市（ミャクミャク）
+- Prefecture + City/Ward _ Manhole Card Number | ex）北海道札幌市_A001
